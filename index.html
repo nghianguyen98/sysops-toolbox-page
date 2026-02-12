@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SysOps Toolbox - The Ultimate Infrastructure Utility</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bgDark: '#050608',
+                        bgCard: '#0E1016',
+                        bgSecondary: '#161922',
+                        neonCyan: '#00F0FF',
+                        neonPurple: '#7000FF',
+                        neonGreen: '#00FF94',
+                        neonOrange: '#FF5F1F',
+                        border: 'rgba(255, 255, 255, 0.08)',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    animation: {
+                        'float': 'float 6s ease-in-out infinite',
+                        'fade-in-up': 'fadeInUp 0.8s ease-out forwards',
+                        'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-20px)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        pulseGlow: {
+                            '0%, 100%': { opacity: '1' },
+                            '50%': { opacity: '.5' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #050608;
+            color: #F8FAFC;
+            cursor: none;
+            /* Hide default cursor for custom one */
+        }
+
+        /* Custom Cursor */
+        .cursor-dot,
+        .cursor-outline {
+            position: fixed;
+            top: 0;
+            left: 0;
+            transform: translate(-50%, -50%);
+            border-radius: 50%;
+            z-index: 9999;
+            pointer-events: none;
+        }
+
+        .cursor-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #00F0FF;
+        }
+
+        .cursor-outline {
+            width: 40px;
+            height: 40px;
+            border: 1px solid rgba(0, 240, 255, 0.5);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+        }
+
+        /* Ambient Glow following mouse */
+        .cursor-glow {
+            position: fixed;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.07) 0%, rgba(112, 0, 255, 0.03) 30%, transparent 70%);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.3s;
+        }
+
+        .glass-nav {
+            background: rgba(5, 6, 8, 0.7);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* 3D Tilt Card */
+        .tilt-card {
+            transform-style: preserve-3d;
+            transform: perspective(1000px);
+            transition: transform 0.1s;
+        }
+
+        .tilt-content {
+            transform: translateZ(20px);
+        }
+
+        /* Spotlight Effect */
+        .spotlight-card {
+            position: relative;
+            background-color: rgba(14, 16, 22, 0.8);
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        /* The glow border effect */
+        .spotlight-card::before {
+            content: "";
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            top: 0;
+            left: 0;
+            border-radius: inherit;
+            background: radial-gradient(800px circle at var(--mouse-x) var(--mouse-y),
+                    rgba(255, 255, 255, 0.15),
+                    transparent 40%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            pointer-events: none;
+            z-index: 3;
+            mix-blend-mode: overlay;
+        }
+
+        .spotlight-card:hover::before {
+            opacity: 1;
+        }
+
+        /* Inner glow */
+        .spotlight-card::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: inherit;
+            background: radial-gradient(600px circle at var(--mouse-x) var(--mouse-y),
+                    rgba(0, 240, 255, 0.05),
+                    transparent 40%);
+            opacity: 0;
+            transition: opacity 0.5s;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .spotlight-card:hover::after {
+            opacity: 1;
+        }
+
+        .btn-shimmer {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-shimmer::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right,
+                    transparent,
+                    rgba(255, 255, 255, 0.5),
+                    transparent);
+            transform: skewX(-25deg);
+            transition: 0.5s;
+        }
+
+        .btn-shimmer:hover::after {
+            left: 150%;
+            transition: 0.7s ease-in-out;
+        }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+
+<body class="antialiased overflow-x-hidden">
+
+    <!-- Network Background Canvas -->
+    <canvas id="network-canvas" class="fixed top-0 left-0 w-full h-full -z-10 pointer-events-none"></canvas>
+
+    <!-- Custom Cursor Elements -->
+    <div class="cursor-dot" id="cursor-dot"></div>
+    <div class="cursor-outline" id="cursor-outline"></div>
+    <div class="cursor-glow" id="cursor-glow"></div>
+
+    <!-- Navigation -->
+    <nav class="glass-nav fixed w-full z-50">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <a href="#" class="flex items-center gap-3 group">
+                <img src="assets/logo.png" alt="Logo"
+                    class="w-10 h-10 rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform">
+                <span class="font-bold text-xl tracking-tight">SysOps Toolbox</span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
+                <a href="#features" class="hover:text-neonCyan transition-colors relative group">
+                    Features
+                    <span
+                        class="absolute -bottom-1 left-0 w-0 h-0.5 bg-neonCyan transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#showcase" class="hover:text-neonCyan transition-colors relative group">
+                    Showcase
+                    <span
+                        class="absolute -bottom-1 left-0 w-0 h-0.5 bg-neonCyan transition-all group-hover:w-full"></span>
+                </a>
+                <a href="#download" class="hover:text-neonCyan transition-colors relative group">
+                    Download
+                    <span
+                        class="absolute -bottom-1 left-0 w-0 h-0.5 bg-neonCyan transition-all group-hover:w-full"></span>
+                </a>
+            </div>
+
+            <a href="#download"
+                class="btn-shimmer hidden md:flex items-center gap-2 bg-white text-black px-5 py-2.5 rounded-xl font-bold text-sm hover:translate-y-[-2px] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] transition-all">
+                Get Started
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="pt-40 pb-20 px-6 text-center relative max-w-7xl mx-auto min-h-screen flex flex-col justify-center">
+        <div
+            class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-neonCyan/10 border border-neonCyan/20 text-neonCyan text-xs font-bold mb-8 animate-fade-in-up hover:bg-neonCyan/20 transition-colors mx-auto cursor-none">
+            <span class="relative flex h-2 w-2">
+                <span
+                    class="animate-ping absolute inline-flex h-full w-full rounded-full bg-neonCyan opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-neonCyan"></span>
+            </span>
+            V1.0.0
+        </div>
+
+        <h1 class="text-5xl md:text-8xl font-extrabold mb-6 tracking-tight leading-tight animate-fade-in-up section-title"
+            style="animation-delay: 0.1s">
+            The All-in-One <br> <span
+                class="text-transparent bg-clip-text bg-gradient-to-r from-neonCyan via-white to-neonPurple bg-300% animate-pulse-glow">IT
+                Toolbox</span>
+        </h1>
+
+        <p class="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10 leading-relaxed animate-fade-in-up"
+            style="animation-delay: 0.2s">
+            Essential network utilities for Network Engineers, SysAdmins, and DevOps. Feature-rich, Native, and Fast.
+        </p>
+
+        <div class="flex flex-col items-center gap-4 mb-12 animate-fade-in-up" style="animation-delay: 0.3s">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                <a href="https://github.com/nghianguyen98/sysops-toolbox/releases/download/v1.0.0/sysops-toolbox-1.0.0-macos-arm64.dmg"
+                    class="btn-shimmer flex items-center gap-3 px-8 py-4 bg-white text-black rounded-2xl font-bold text-lg hover:scale-105 transition-transform shadow-[0_0_40px_rgba(0,240,255,0.2)]">
+                    <svg class="w-6 h-6 mb-1" viewBox="0 0 24 24" fill="currentColor"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            d="M17.3377 13.9118C17.3056 12.0019 18.8475 11.0253 18.9117 10.9611C17.9167 9.54877 16.3758 9.38827 15.9008 9.3626C14.6226 9.2471 13.3764 10.0894 12.7214 10.0894C12.0537 10.0894 11.0331 9.3626 9.94193 9.38827C8.5296 9.41393 7.23293 10.1984 6.5011 11.4172C5.01193 13.9246 6.13527 17.6346 7.5796 19.6436C8.28577 20.6194 9.12677 21.7108 10.2321 21.6723C11.3104 21.6338 11.7213 21.0046 13.0564 21.0046C14.3916 21.0046 14.7768 21.6723 15.9329 21.6338C17.0628 21.5953 17.7689 20.6451 18.4623 19.6693C19.2583 18.5461 19.5793 17.4548 19.6049 17.3906C19.5793 17.3778 17.3698 16.5561 17.3377 13.9118ZM14.9756 7.59077C15.5663 6.91027 15.9643 5.9601 15.8488 5.01C15.0143 5.04852 14.0063 5.54927 13.4156 6.21693C12.8764 6.82043 12.3949 7.79627 12.5234 8.7206C13.4479 8.7976 14.4364 8.2456 14.9756 7.59077Z"
+                            fill="currentColor" />
+                    </svg>
+                    Download for macOS
+                </a>
+                <a href="https://github.com/nghianguyen98/sysops-toolbox"
+                    class="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-bold text-lg hover:bg-white/10 transition-colors backdrop-blur-md hover:border-white/30 flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    GitHub
+                </a>
+            </div>
+            <div class="flex items-center gap-2 text-sm text-slate-500 font-mono">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                    <path
+                        d="M0 3.449L9.75 2.1v9.451l-9.75.043v-8.145zm10.954-1.291l11.696-1.605v10.998H10.954V2.158zm-10.954 10.59l9.75.043V22.25l-9.75-1.355V12.748zm10.954-.054h11.696V23.75L10.954 22.14V12.694z" />
+                </svg>
+                <span>Windows version coming soon</span>
+            </div>
+        </div>
+
+
+        <!-- Main Dashboard Preview with Tilt -->
+        <div class="tilt-card relative rounded-3xl border border-white/10 shadow-[0_0_100px_rgba(0,240,255,0.1)] overflow-hidden bg-bgCard/80 backdrop-blur-sm spotlight-card group mx-auto max-w-5xl"
+            style="animation-delay: 0.5s">
+            <div
+                class="absolute inset-0 bg-gradient-to-t from-bgDark via-transparent to-transparent z-10 pointer-events-none">
+            </div>
+            <div class="tilt-content">
+                <img src="assets/screenshot_myip.png" alt="My IP Dashboard"
+                    class="w-full h-auto transition-transform duration-700 group-hover:scale-[1.01]">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Bento Grid -->
+    <section id="features" class="py-32 px-6 max-w-7xl mx-auto">
+        <div class="text-center mb-20 reveal">
+            <h2 class="text-4xl font-bold mb-4">Powerful Tools</h2>
+            <p class="text-slate-400">From real-time monitoring to config generation.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="cards-container">
+
+            <!-- Feature 1: Live Monitor (Large) -->
+            <div
+                class="lg:col-span-2 tilt-card spotlight-card border border-white/5 rounded-3xl p-8 reveal group cursor-none bg-bgCard/80 backdrop-blur-sm flex flex-col md:flex-row gap-8 items-center overflow-hidden">
+                <div class="flex-1 z-10">
+                    <div
+                        class="w-12 h-12 bg-neonPurple/10 rounded-xl flex items-center justify-center text-2xl mb-6 text-neonPurple shadow-inner">
+                        📊</div>
+                    <h3 class="text-2xl font-bold mb-3 text-white group-hover:text-neonPurple transition-colors">
+                        Live Latency Monitor</h3>
+                    <p class="text-slate-400 mb-6 leading-relaxed">
+                        Track ping response times to critical services (Google, Cloudflare, Gateway) in real-time.
+                        Detect packet loss and jitter instantly.
+                    </p>
+                </div>
+                <div
+                    class="flex-[1.5] relative rounded-lg overflow-hidden border border-white/10 shadow-2xl transform group-hover:scale-105 transition-transform duration-500">
+                    <img src="assets/screenshot_monitor.png" alt="Latency Monitor" class="w-full h-auto">
+                </div>
+            </div>
+
+            <!-- Feature 2: SSH Tunnel -->
+            <div
+                class="tilt-card spotlight-card border border-white/5 rounded-3xl p-8 reveal group cursor-none bg-bgCard/80 backdrop-blur-sm flex flex-col">
+                <div
+                    class="w-12 h-12 bg-neonOrange/10 rounded-xl flex items-center justify-center text-2xl mb-6 text-neonOrange shadow-inner">
+                    🔒</div>
+                <h3 class="text-xl font-bold mb-2 text-white group-hover:text-neonOrange transition-colors">
+                    SSH Tunnel Builder</h3>
+                <p class="text-slate-400 text-sm mb-6 flex-grow">
+                    Visualize Port Forwarding. Drag & Drop creation of Local/Remote tunnels.
+                </p>
+                <div
+                    class="mt-auto rounded-lg overflow-hidden border border-white/10 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <img src="assets/screenshot_ssh.png" alt="SSH Tunnel" class="w-full h-auto">
+                </div>
+            </div>
+
+            <!-- Feature 3: SSL Inspector -->
+            <div
+                class="tilt-card spotlight-card border border-white/5 rounded-3xl p-8 reveal group cursor-none bg-bgCard/80 backdrop-blur-sm flex flex-col">
+                <div
+                    class="w-12 h-12 bg-neonGreen/10 rounded-xl flex items-center justify-center text-2xl mb-6 text-neonGreen shadow-inner">
+                    🛡️</div>
+                <h3 class="text-xl font-bold mb-2 text-white group-hover:text-neonGreen transition-colors">
+                    SSL Inspector</h3>
+                <p class="text-slate-400 text-sm mb-6 flex-grow">
+                    Check certificate chain, expiry, and validity for any domain instantly.
+                </p>
+                <div
+                    class="mt-auto rounded-lg overflow-hidden border border-white/10 opacity-80 group-hover:opacity-100 transition-opacity">
+                    <img src="assets/screenshot_ssl.png" alt="SSL Inspector" class="w-full h-auto">
+                </div>
+            </div>
+
+            <!-- Feature 4: Docker Converter (Large) -->
+            <div
+                class="lg:col-span-2 tilt-card spotlight-card border border-white/5 rounded-3xl p-8 reveal group cursor-none bg-bgCard/80 backdrop-blur-sm flex flex-col md:flex-row-reverse gap-8 items-center overflow-hidden">
+                <div class="flex-1 z-10">
+                    <div
+                        class="w-12 h-12 bg-neonCyan/10 rounded-xl flex items-center justify-center text-2xl mb-6 text-neonCyan shadow-inner">
+                        🐳</div>
+                    <h3 class="text-2xl font-bold mb-3 text-white group-hover:text-neonCyan transition-colors">
+                        Docker Converter</h3>
+                    <p class="text-slate-400 mb-6 leading-relaxed">
+                        Convert `docker run` commands to `docker-compose.yaml` (and vice-versa) with a single click.
+                        Clean, validated, and ready to deploy.
+                    </p>
+                </div>
+                <div
+                    class="flex-[1.5] relative rounded-lg overflow-hidden border border-white/10 shadow-2xl transform group-hover:scale-105 transition-transform duration-500">
+                    <img src="assets/screenshot_docker.png" alt="Docker Converter" class="w-full h-auto">
+                </div>
+            </div>
+
+            <!-- Feature 5: Smart Calculators (Restored) -->
+            <div
+                class="md:col-span-2 tilt-card spotlight-card bg-gradient-to-br from-bgCard/90 to-bgSecondary/90 backdrop-blur-sm border border-white/5 rounded-3xl p-10 reveal group overflow-hidden cursor-none">
+                <div class="tilt-content relative z-10 flex flex-col md:flex-row items-center gap-10">
+                    <div class="flex-1">
+                        <div
+                            class="w-14 h-14 bg-neonGreen/10 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform text-neonGreen shadow">
+                            💾</div>
+                        <h3 class="text-2xl font-bold mb-3 text-white group-hover:text-neonGreen transition-colors">
+                            Smart Calculators</h3>
+                        <p class="text-slate-400 mb-6">RAID, ZFS, and Subnet calculators for precise infrastructure
+                            planning.</p>
+                        <a href="#"
+                            class="text-sm font-bold text-white border-b border-neonGreen pb-1 hover:text-neonGreen transition-colors">Try
+                            It Out →</a>
+                    </div>
+                    <img src="assets/raid.png"
+                        class="w-full md:w-1/2 rounded-xl shadow-2xl rotate-[-5deg] border border-white/10 opacity-90 group-hover:rotate-0 group-hover:scale-110 transition-all duration-500 ease-out"
+                        alt="RAID Calculator">
+                </div>
+            </div>
+
+            <!-- Feature 6: Network Discovery (Restored) -->
+            <div
+                class="tilt-card spotlight-card border border-white/5 rounded-3xl p-10 reveal group cursor-none bg-bgCard/80 backdrop-blur-sm">
+                <div class="tilt-content relative z-10 h-full flex flex-col">
+                    <div
+                        class="w-14 h-14 bg-neonCyan/10 rounded-2xl flex items-center justify-center text-3xl mb-6 group-hover:scale-110 transition-transform text-neonCyan shadow">
+                        🌐</div>
+                    <h3 class="text-xl font-bold mb-3 text-white group-hover:text-neonCyan transition-colors">
+                        Network Discovery</h3>
+                    <p class="text-slate-400 mb-6 flex-grow">Integrated LAN Scanner, Port Scanner, and DNS Lookup.
+                        Find devices and check open ports quickly.</p>
+                    <div class="mt-auto pt-6 border-t border-white/5">
+                        <div class="flex items-center gap-2 text-xs font-mono text-neonCyan">
+                            <span class="w-2 h-2 rounded-full bg-neonCyan animate-pulse"></span>
+                            Scanning: 192.168.1.0/24...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- Showcase Carousel / Stack (Restored) -->
+    <section id="showcase" class="py-32 bg-bgSecondary/30 border-y border-white/5 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col md:flex-row items-center gap-16 reveal">
+                <div class="flex-1">
+                    <div
+                        class="inline-block px-3 py-1 rounded-full border border-neonOrange/30 text-neonOrange text-xs font-bold mb-6 hover:bg-neonOrange/10 transition-colors cursor-default">
+                        FEATURE SPOTLIGHT
+                    </div>
+                    <h2 class="text-5xl font-bold mb-8 leading-tight text-white">Visual SSH <br><span
+                            class="text-white">Tunnel
+                            Builder</span></h2>
+                    <p class="text-slate-400 text-lg mb-8 leading-relaxed">
+                        Forget complex CLI flags. Drag and drop your way to secure tunnels.
+                        Visualize Local, Remote, and Dynamic port forwarding.
+                    </p>
+                    <ul class="space-y-6 mb-10">
+                        <li class="flex items-center gap-4 text-slate-300 group cursor-none">
+                            <span
+                                class="w-8 h-8 rounded-full bg-neonGreen/10 flex items-center justify-center text-neonGreen text-sm group-hover:bg-neonGreen group-hover:text-black transition-all">✓</span>
+                            <span class="group-hover:translate-x-2 transition-transform">Visual Jump Host
+                                Configuration</span>
+                        </li>
+                        <li class="flex items-center gap-4 text-slate-300 group cursor-none">
+                            <span
+                                class="w-8 h-8 rounded-full bg-neonGreen/10 flex items-center justify-center text-neonGreen text-sm group-hover:bg-neonGreen group-hover:text-black transition-all">✓</span>
+                            <span class="group-hover:translate-x-2 transition-transform">Auto-generate SSH
+                                Commands</span>
+                        </li>
+                    </ul>
+                    <a href="#"
+                        class="btn-shimmer inline-block px-8 py-3 bg-white text-black rounded-xl font-bold hover:shadow-[0_0_30px_rgba(255,255,255,0.2)] transition-shadow">Explore
+                        Tools</a>
+                </div>
+                <!-- 3D Layered Image Effect -->
+                <div class="flex-1 relative group perspective-1000">
+                    <div
+                        class="absolute -inset-10 bg-neonOrange/20 blur-3xl opacity-0 group-hover:opacity-60 transition-opacity duration-700 rounded-full">
+                    </div>
+                    <img src="assets/ssh.png" alt="SSH Tunnel"
+                        class="relative rounded-2xl shadow-2xl border border-white/10 group-hover:rotate-y-12 group-hover:rotate-x-6 transition-transform duration-700 z-10 transform-style-3d">
+                    <!-- Floating Badge -->
+                    <div
+                        class="absolute -bottom-6 -left-6 bg-bgCard border border-white/10 p-4 rounded-xl shadow-xl z-20 group-hover:translate-z-20 transition-transform duration-700 flex items-center gap-3">
+                        <div class="w-3 h-3 bg-neonGreen rounded-full animate-pulse"></div>
+                        <div class="text-xs font-mono text-slate-300">Tunnel Active<br><span
+                                class="text-white font-bold">Latency: 24ms</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Roadmap / Coming Soon -->
+    <section class="py-20 px-6 max-w-7xl mx-auto border-t border-white/5">
+        <div class="text-center mb-16 reveal">
+            <h2 class="text-3xl font-bold mb-4 opacity-50">Roadmap</h2>
+            <p class="text-slate-400 uppercase tracking-widest text-sm">Coming Soon in V2.0</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Roadmap Item 1 -->
+            <div
+                class="p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm opacity-50 hover:opacity-100 transition-opacity group cursor-default">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-lg">☁️</div>
+                    <h3 class="font-bold text-lg">Cloud Integration</h3>
+                </div>
+                <p class="text-sm text-slate-400">Direct monitoring for AWS EC2, S3, and RDS resources.</p>
+                <div
+                    class="mt-4 text-xs font-mono text-neonCyan border border-neonCyan/20 inline-block px-2 py-1 rounded">
+                    In Development</div>
+            </div>
+
+            <!-- Roadmap Item 2 -->
+            <div
+                class="p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm opacity-50 hover:opacity-100 transition-opacity group cursor-default">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-lg">🐳</div>
+                    <h3 class="font-bold text-lg">Docker Manager</h3>
+                </div>
+                <p class="text-sm text-slate-400">View, stop, and restart containers without leaving the app.</p>
+                <div
+                    class="mt-4 text-xs font-mono text-neonPurple border border-neonPurple/20 inline-block px-2 py-1 rounded">
+                    Planned</div>
+            </div>
+
+            <!-- Roadmap Item 3 -->
+            <div
+                class="p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm opacity-50 hover:opacity-100 transition-opacity group cursor-default">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-lg">🧠</div>
+                    <h3 class="font-bold text-lg">AI Log Analysis</h3>
+                </div>
+                <p class="text-sm text-slate-400">Smart parsing of system logs to detect root causes automatically.</p>
+                <div
+                    class="mt-4 text-xs font-mono text-neonOrange border border-neonOrange/20 inline-block px-2 py-1 rounded">
+                    Researching</div>
+            </div>
+
+            <!-- Roadmap Item 4 -->
+            <div
+                class="p-6 rounded-2xl border border-white/5 bg-white/5 backdrop-blur-sm opacity-50 hover:opacity-100 transition-opacity group cursor-default">
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                d="M0 3.449L9.75 2.1v9.451l-9.75.043v-8.145zm10.954-1.291l11.696-1.605v10.998H10.954V2.158zm-10.954 10.59l9.75.043V22.25l-9.75-1.355V12.748zm10.954-.054h11.696V23.75L10.954 22.14V12.694z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-lg">Windows Native App</h3>
+                </div>
+                <p class="text-sm text-slate-400">Full support for Windows 10/11 with Fluent Design integration.</p>
+                <div
+                    class="mt-4 text-xs font-mono text-blue-400 border border-blue-400/20 inline-block px-2 py-1 rounded">
+                    Coming Soon</div>
+            </div>
+
+
+        </div>
+
+        <div class="mt-16 text-center reveal">
+            <p class="text-slate-400 text-lg flex items-center justify-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-neonGreen animate-pulse"></span>
+                And many more tools are being developed for future releases.
+            </p>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="py-20 px-6 border-t border-white/5 bg-black/80 backdrop-blur-lg overflow-hidden relative">
+        <div
+            class="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent">
+        </div>
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
+            <div class="flex items-center gap-3">
+                <img src="assets/logo.png" alt="Logo" class="w-8 h-8 rounded-lg transition-all cursor-none">
+                <span class="font-bold text-lg text-slate-300">SysOps Toolbox</span>
+            </div>
+            <div class="text-slate-500 text-sm font-mono">
+                &copy; 2026 SysOps Toolbox. Built with ❤️ for the community.
+            </div>
+            <div class="flex gap-6">
+                <a href="https://github.com/nghianguyen98/sysops-toolbox.git"
+                    class="text-slate-400 hover:text-white transition-colors hover:scale-110 transform flex items-center gap-2"
+                    target="_blank" rel="noopener noreferrer">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd"
+                            d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"
+                            clip-rule="evenodd" />
+                    </svg>
+                    GitHub Repo
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- 0. Network Background Animation ---
+        class Particle {
+            constructor(w, h) {
+                this.x = Math.random() * w;
+                this.y = Math.random() * h;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 1.5 + 0.5;
+                this.color = 'rgba(255, 255, 255, 0.15)';
+            }
+
+            update(w, h) {
+                this.x += this.vx;
+                this.y += this.vy;
+
+                if (this.x < 0 || this.x > w) this.vx *= -1;
+                if (this.y < 0 || this.y > h) this.vy *= -1;
+            }
+
+            draw(ctx) {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        class NetworkAnimation {
+            constructor() {
+                this.canvas = document.getElementById('network-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.particles = [];
+                this.connectionDistance = 120;
+                this.mouseDistance = 150;
+                this.mouse = { x: null, y: null };
+
+                this.init();
+                this.animate();
+            }
+
+            init() {
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+                window.addEventListener('mousemove', (e) => {
+                    this.mouse.x = e.clientX;
+                    this.mouse.y = e.clientY;
+                });
+
+                const particleCount = Math.min(Math.floor(this.width * this.height / 12000), 80);
+                for (let i = 0; i < particleCount; i++) {
+                    this.particles.push(new Particle(this.width, this.height));
+                }
+            }
+
+            resize() {
+                this.width = window.innerWidth;
+                this.height = window.innerHeight;
+                this.canvas.width = this.width;
+                this.canvas.height = this.height;
+            }
+
+            animate() {
+                this.ctx.clearRect(0, 0, this.width, this.height);
+
+                for (let i = 0; i < this.particles.length; i++) {
+                    let p = this.particles[i];
+                    p.update(this.width, this.height);
+                    p.draw(this.ctx);
+
+                    for (let j = i + 1; j < this.particles.length; j++) {
+                        let p2 = this.particles[j];
+                        let dx = p.x - p2.x;
+                        let dy = p.y - p2.y;
+                        let distance = Math.sqrt(dx * dx + dy * dy);
+
+                        if (distance < this.connectionDistance) {
+                            this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 * (1 - distance / this.connectionDistance)})`;
+                            this.ctx.lineWidth = 1;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(p2.x, p2.y);
+                            this.ctx.stroke();
+                        }
+                    }
+
+                    if (this.mouse.x != null) {
+                        let dx = p.x - this.mouse.x;
+                        let dy = p.y - this.mouse.y;
+                        let distance = Math.sqrt(dx * dx + dy * dy);
+                        if (distance < this.mouseDistance) {
+                            this.ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 * (1 - distance / this.mouseDistance)})`;
+                            this.ctx.lineWidth = 1.5;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(p.x, p.y);
+                            this.ctx.lineTo(this.mouse.x, this.mouse.y);
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(() => this.animate());
+            }
+        }
+        new NetworkAnimation();
+
+        // --- 1. Custom Cursor Logic ---
+        const cursorDot = document.getElementById("cursor-dot");
+        const cursorOutline = document.getElementById("cursor-outline");
+        const cursorGlow = document.getElementById("cursor-glow");
+
+        window.addEventListener("mousemove", (e) => {
+            const posX = e.clientX;
+            const posY = e.clientY;
+
+            // Dot follows instantly
+            cursorDot.style.left = `${posX}px`;
+            cursorDot.style.top = `${posY}px`;
+
+            // Outline follows with slight delay (animation in CSS)
+            cursorOutline.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 500, fill: "forwards" });
+
+            // Glow follows with delay
+            cursorGlow.animate({
+                left: `${posX}px`,
+                top: `${posY}px`
+            }, { duration: 800, fill: "forwards" });
+        });
+
+        // Hover interact states for cursor
+        document.querySelectorAll('a, button, .spotlight-card').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursorOutline.style.width = '60px';
+                cursorOutline.style.height = '60px';
+                cursorOutline.style.backgroundColor = 'rgba(0, 240, 255, 0.1)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursorOutline.style.width = '40px';
+                cursorOutline.style.height = '40px';
+                cursorOutline.style.backgroundColor = 'transparent';
+            });
+        });
+
+
+        // --- 2. Spotlight & 3D Tilt Logic ---
+        const cards = document.querySelectorAll('.tilt-card');
+
+        cards.forEach(card => {
+            card.addEventListener('mousemove', (e) => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                // Spotlight vars
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+
+                // 3D Tilt calculation
+                // Center of card
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+
+                // Mouse offset from center
+                const mouseX = x - centerX;
+                const mouseY = y - centerY;
+
+                // Rotation degrees (max 10deg)
+                const rotateX = (mouseY / centerY) * -5; // Invert axis
+                const rotateY = (mouseX / centerX) * 5;
+
+                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+            });
+
+            card.addEventListener('mouseleave', () => {
+                // Reset transform
+                card.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+            });
+        });
+
+
+        // --- 3. Scroll Reveal ---
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.reveal, .section-title').forEach(el => observer.observe(el));
+    </script>
+</body>
+
+</html>
