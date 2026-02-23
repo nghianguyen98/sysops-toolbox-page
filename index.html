@@ -639,12 +639,19 @@
                 this.width = window.innerWidth;
                 this.height = window.innerHeight;
                 this.particles = [];
-                this.connectionDistance = 120;
-                this.mouseDistance = 150;
+                // Optimize math: use squared distances to avoid Math.sqrt in the animation loop
+                this.connectionDistance = 110;
+                this.connectionDistanceSq = this.connectionDistance * this.connectionDistance;
+                this.mouseDistance = 140;
+                this.mouseDistanceSq = this.mouseDistance * this.mouseDistance;
                 this.mouse = { x: null, y: null };
 
+                // Throttling vars for high refresh rate monitors (Cap at ~60fps)
+                this.lastTime = 0;
+                this.fpsInterval = 1000 / 60;
+
                 this.init();
-                this.animate();
+                requestAnimationFrame((t) => this.animate(t));
             }
 
             init() {
@@ -653,9 +660,10 @@
                 window.addEventListener('mousemove', (e) => {
                     this.mouse.x = e.clientX;
                     this.mouse.y = e.clientY;
-                });
+                }, { passive: true });
 
-                const particleCount = Math.min(Math.floor(this.width * this.height / 12000), 80);
+                // Reduced max particles for O(N^2) loop optimization
+                const particleCount = Math.min(Math.floor(this.width * this.height / 15000), 60);
                 for (let i = 0; i < particleCount; i++) {
                     this.particles.push(new Particle(this.width, this.height));
                 }
@@ -668,7 +676,14 @@
                 this.canvas.height = this.height;
             }
 
-            animate() {
+            animate(currentTime) {
+                requestAnimationFrame((t) => this.animate(t));
+
+                // Throttle frame rate to max 60fps on 144hz/240hz monitors to save CPU
+                const deltaTime = currentTime - this.lastTime;
+                if (deltaTime < this.fpsInterval) return;
+                this.lastTime = currentTime - (deltaTime % this.fpsInterval);
+
                 this.ctx.clearRect(0, 0, this.width, this.height);
 
                 for (let i = 0; i < this.particles.length; i++) {
@@ -676,13 +691,15 @@
                     p.update(this.width, this.height);
                     p.draw(this.ctx);
 
+                    // Connect particles
                     for (let j = i + 1; j < this.particles.length; j++) {
                         let p2 = this.particles[j];
                         let dx = p.x - p2.x;
                         let dy = p.y - p2.y;
-                        let distance = Math.sqrt(dx * dx + dy * dy);
+                        let distanceSq = dx * dx + dy * dy; // Huge optimization over Math.sqrt()
 
-                        if (distance < this.connectionDistance) {
+                        if (distanceSq < this.connectionDistanceSq) {
+                            let distance = Math.sqrt(distanceSq); // Only calc sqrt if within range to get opacity
                             this.ctx.strokeStyle = `rgba(255, 255, 255, ${0.1 * (1 - distance / this.connectionDistance)})`;
                             this.ctx.lineWidth = 1;
                             this.ctx.beginPath();
@@ -692,11 +709,14 @@
                         }
                     }
 
+                    // Mouse interaction
                     if (this.mouse.x != null) {
                         let dx = p.x - this.mouse.x;
                         let dy = p.y - this.mouse.y;
-                        let distance = Math.sqrt(dx * dx + dy * dy);
-                        if (distance < this.mouseDistance) {
+                        let distanceSq = dx * dx + dy * dy;
+
+                        if (distanceSq < this.mouseDistanceSq) {
+                            let distance = Math.sqrt(distanceSq);
                             this.ctx.strokeStyle = `rgba(0, 240, 255, ${0.3 * (1 - distance / this.mouseDistance)})`;
                             this.ctx.lineWidth = 1.5;
                             this.ctx.beginPath();
@@ -706,7 +726,6 @@
                         }
                     }
                 }
-                requestAnimationFrame(() => this.animate());
             }
         }
         new NetworkAnimation();
