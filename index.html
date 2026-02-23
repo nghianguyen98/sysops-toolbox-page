@@ -87,9 +87,9 @@
         /* Ambient Glow following mouse */
         .cursor-glow {
             position: fixed;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(0, 240, 255, 0.07) 0%, rgba(112, 0, 255, 0.03) 30%, transparent 70%);
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 240, 255, 0.09) 0%, rgba(112, 0, 255, 0.05) 40%, transparent 70%);
             transform: translate(-50%, -50%);
             pointer-events: none;
             z-index: 0;
@@ -97,8 +97,7 @@
         }
 
         .glass-nav {
-            background: rgba(5, 6, 8, 0.7);
-            backdrop-filter: blur(20px);
+            background: rgba(5, 6, 8, 0.95);
             border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
@@ -741,6 +740,7 @@
         let outlineY = mouseY;
         let glowX = mouseX;
         let glowY = mouseY;
+        let isMoving = false; // Sleep state flag
 
         // Initialize relative origin
         cursorDot.style.top = '0px';
@@ -756,6 +756,12 @@
 
             // Dot follows instantly using GPU-accelerated transform
             cursorDot.style.transform = `translate(calc(${mouseX}px - 50%), calc(${mouseY}px - 50%))`;
+
+            // Wake up animation loop
+            if (!isMoving) {
+                isMoving = true;
+                requestAnimationFrame(renderCursor);
+            }
         }, { passive: true });
 
         // Request animation frame loop for smooth trailing effect
@@ -771,9 +777,14 @@
             cursorOutline.style.transform = `translate(calc(${outlineX}px - 50%), calc(${outlineY}px - 50%))`;
             cursorGlow.style.transform = `translate(calc(${glowX}px - 50%), calc(${glowY}px - 50%))`;
 
+            // Sleep check: if extremely close to target, stop loop to save CPU
+            if (Math.abs(mouseX - outlineX) < 0.1 && Math.abs(mouseY - outlineY) < 0.1 && Math.abs(mouseX - glowX) < 0.1 && Math.abs(mouseY - glowY) < 0.1) {
+                isMoving = false;
+                return; // Break requestAnimationFrame loop
+            }
+
             requestAnimationFrame(renderCursor);
         }
-        requestAnimationFrame(renderCursor);
 
         // Hover interact states for cursor
         document.querySelectorAll('a, button, .spotlight-card').forEach(el => {
