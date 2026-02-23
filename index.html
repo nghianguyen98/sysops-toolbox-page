@@ -716,26 +716,45 @@
         const cursorOutline = document.getElementById("cursor-outline");
         const cursorGlow = document.getElementById("cursor-glow");
 
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let outlineX = mouseX;
+        let outlineY = mouseY;
+        let glowX = mouseX;
+        let glowY = mouseY;
+
+        // Initialize relative origin
+        cursorDot.style.top = '0px';
+        cursorDot.style.left = '0px';
+        cursorOutline.style.top = '0px';
+        cursorOutline.style.left = '0px';
+        cursorGlow.style.top = '0px';
+        cursorGlow.style.left = '0px';
+
         window.addEventListener("mousemove", (e) => {
-            const posX = e.clientX;
-            const posY = e.clientY;
+            mouseX = e.clientX;
+            mouseY = e.clientY;
 
-            // Dot follows instantly
-            cursorDot.style.left = `${posX}px`;
-            cursorDot.style.top = `${posY}px`;
+            // Dot follows instantly using GPU-accelerated transform
+            cursorDot.style.transform = `translate(calc(${mouseX}px - 50%), calc(${mouseY}px - 50%))`;
+        }, { passive: true });
 
-            // Outline follows with slight delay (animation in CSS)
-            cursorOutline.animate({
-                left: `${posX}px`,
-                top: `${posY}px`
-            }, { duration: 500, fill: "forwards" });
+        // Request animation frame loop for smooth trailing effect
+        function renderCursor() {
+            // Lerp (linear interpolation) towards target position
+            outlineX += (mouseX - outlineX) * 0.15;
+            outlineY += (mouseY - outlineY) * 0.15;
 
-            // Glow follows with delay
-            cursorGlow.animate({
-                left: `${posX}px`,
-                top: `${posY}px`
-            }, { duration: 800, fill: "forwards" });
-        });
+            glowX += (mouseX - glowX) * 0.08;
+            glowY += (mouseY - glowY) * 0.08;
+
+            // Apply transforms
+            cursorOutline.style.transform = `translate(calc(${outlineX}px - 50%), calc(${outlineY}px - 50%))`;
+            cursorGlow.style.transform = `translate(calc(${glowX}px - 50%), calc(${glowY}px - 50%))`;
+
+            requestAnimationFrame(renderCursor);
+        }
+        requestAnimationFrame(renderCursor);
 
         // Hover interact states for cursor
         document.querySelectorAll('a, button, .spotlight-card').forEach(el => {
